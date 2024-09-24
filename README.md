@@ -2,6 +2,7 @@
 an MRKL implementation using goofier
 
 
+## how to add swagger
 ```bash
 $ go get github.com/gofiber/contrib/swagger  
 ```
