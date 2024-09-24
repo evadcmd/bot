@@ -1,5 +1,5 @@
 # bot
-an MRKL implementation using goofier
+an MRKL implementation using gofiber
 
 
 ## how to add swagger
