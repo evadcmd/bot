@@ -1,0 +1,7 @@
+{
+    "[go]": {
+        "editor.defaultFormatter": "golang.go"
+    },
+    "go.testFlags": ["-v", "-count=1"],
+    "go.formatTool": "gofumpt",
+}

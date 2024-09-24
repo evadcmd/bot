@@ -1,2 +1,15 @@
 # bot
 an MRKL implementation using goofier
+
+
+```bash
+$ go get github.com/gofiber/contrib/swagger  
+```
+
+```bash
+$ go install github.com/swaggo/swag/cmd/swag@latest
+```
+
+```bash
+$ swag init -g cmd/server/main.go --parseInternal
+```

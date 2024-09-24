@@ -1,0 +1,47 @@
+basePath: /
+definitions:
+  dto.Q:
+    properties:
+      content:
+        example: hi
+        type: string
+    type: object
+host: localhost:5252
+info:
+  contact:
+    email: evadcmd@gmail.com
+    name: evadcmd
+  description: an experimental chat API
+  title: RaBOT
+  version: 0.0.1
+paths:
+  /api/v0/mrkl:
+    post:
+      description: a MRKL API
+      parameters:
+      - description: Q
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Q'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      summary: k8s readiness probe
+      tags:
+      - /api/v0
+  /healthz:
+    get:
+      description: a readiness probe for k8s
+      responses:
+        "200":
+          description: OK
+      summary: k8s readiness probe
+      tags:
+      - healthcheck
+schemes:
+- http
+swagger: "2.0"
