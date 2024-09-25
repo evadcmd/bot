@@ -70,12 +70,11 @@ func (ws *WebSearchTool) Search(ctx context.Context, query string) (string, erro
 		return "", fmt.Errorf("failed to send a cse request: %w", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		var err error
 		data, err := io.ReadAll(res.Body)
 		if err == nil {
 			err = errors.New(string(data))
 		}
-		return "", fmt.Errorf("failed on sending a cse request: %w", err)
+		return "", fmt.Errorf("get an error response from google custom search: %w", err)
 	}
 	defer res.Body.Close()
 
