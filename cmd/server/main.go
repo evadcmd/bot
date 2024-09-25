@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 )
 
-//	@title			RaBOT
+//	@title			BOT
 //	@version		0.0.1
 //	@description	an experimental chat API
 //	@contact.name	evadcmd

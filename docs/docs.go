@@ -27,7 +27,7 @@ const docTemplate = `{
                 "tags": [
                     "/api/v0"
                 ],
-                "summary": "k8s readiness probe",
+                "summary": "chat API",
                 "parameters": [
                     {
                         "description": "Q",
@@ -50,7 +50,7 @@ const docTemplate = `{
             "get": {
                 "description": "a readiness probe for k8s",
                 "tags": [
-                    "healthcheck"
+                    "ReadinessProbe"
                 ],
                 "summary": "k8s readiness probe",
                 "responses": {
@@ -80,7 +80,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:5252",
 	BasePath:         "/",
 	Schemes:          []string{"http"},
-	Title:            "RaBOT",
+	Title:            "BOT",
 	Description:      "an experimental chat API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

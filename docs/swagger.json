@@ -5,7 +5,7 @@
     "swagger": "2.0",
     "info": {
         "description": "an experimental chat API",
-        "title": "RaBOT",
+        "title": "BOT",
         "contact": {
             "name": "evadcmd",
             "email": "evadcmd@gmail.com"
@@ -24,7 +24,7 @@
                 "tags": [
                     "/api/v0"
                 ],
-                "summary": "k8s readiness probe",
+                "summary": "chat API",
                 "parameters": [
                     {
                         "description": "Q",
@@ -47,7 +47,7 @@
             "get": {
                 "description": "a readiness probe for k8s",
                 "tags": [
-                    "healthcheck"
+                    "ReadinessProbe"
                 ],
                 "summary": "k8s readiness probe",
                 "responses": {

@@ -12,7 +12,7 @@ info:
     email: evadcmd@gmail.com
     name: evadcmd
   description: an experimental chat API
-  title: RaBOT
+  title: BOT
   version: 0.0.1
 paths:
   /api/v0/mrkl:
@@ -30,7 +30,7 @@ paths:
       responses:
         "200":
           description: OK
-      summary: k8s readiness probe
+      summary: chat API
       tags:
       - /api/v0
   /healthz:
@@ -41,7 +41,7 @@ paths:
           description: OK
       summary: k8s readiness probe
       tags:
-      - healthcheck
+      - ReadinessProbe
 schemes:
 - http
 swagger: "2.0"
