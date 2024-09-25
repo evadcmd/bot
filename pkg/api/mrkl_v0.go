@@ -18,7 +18,7 @@ import (
 func MRKL(ctx *fiber.Ctx) error {
 	var q dto.Q
 	if err := ctx.BodyParser(&q); err != nil {
-		return fmt.Errorf("failed to deserialize request body to dto.Q struct")
+		return fmt.Errorf("failed to deserialize request body to dto.Q struct: %w", err)
 	}
 	res, err := mrkl.Induce(ctx.Context(), q.Content)
 	if err != nil {
