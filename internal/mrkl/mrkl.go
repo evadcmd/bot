@@ -52,11 +52,11 @@ func Induce(ctx context.Context, q string) (string, error) {
 		}
 		slog.Info(res)
 
-		if idx := finishRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
+		if idx := finishRegex.FindStringSubmatchIndex(res); len(idx) != -1 {
 			prompt += res[:idx[1]]
 			slog.Info(prompt)
 			return openai.ChatCompletion(ctx, answerer, prompt, nil)
-		} else if idx = actionRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
+		} else if idx = actionRegex.FindStringSubmatchIndex(res); len(idx) != -1 {
 			name, input := res[idx[2]:idx[3]], res[idx[4]:idx[5]]
 			slog.Info("use tool", name, input)
 			tl, ok := nameToTool[name]
