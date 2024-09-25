@@ -61,7 +61,7 @@ func Induce(ctx context.Context, q string) (string, error) {
 			slog.Info("use tool", name, input)
 			tl, ok := nameToTool[name]
 			if !ok {
-				return "", fmt.Errorf("failed to get the tool name and input from LLM's action text block: %s %s", name, input)
+				return "", fmt.Errorf("failed to get the tool name and input from MRKL's action text block: %s %s", name, input)
 			}
 			var observation string
 			switch tool := tl.(type) {
