@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/evadcmd/bot/internal/api"
+	"github.com/evadcmd/bot/pkg/api"
 	"github.com/gofiber/contrib/swagger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

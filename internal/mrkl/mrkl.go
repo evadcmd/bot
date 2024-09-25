@@ -42,13 +42,13 @@ func init() {
 func Induce(ctx context.Context, q string) (string, error) {
 	var mrklTplBytes bytes.Buffer
 	if err := mrklTemplate.Execute(&mrklTplBytes, mrklParam{Tools: tools, Input: q}); err != nil {
-		return "", fmt.Errorf("failed to execute the template: %w", err)
+		return "", fmt.Errorf("failed to execute the MRKL template: %w", err)
 	}
 	prompt := mrklTplBytes.String()
 	for range 10 {
 		res, err := openai.ChatCompletion(ctx, selector, prompt, stopFlags)
 		if err != nil {
-			return "", fmt.Errorf("failed to request to openai server: %w", err)
+			return "", fmt.Errorf("failed to send a request to OpenAI API server: %w", err)
 		}
 		slog.Info(res)
 
@@ -61,7 +61,7 @@ func Induce(ctx context.Context, q string) (string, error) {
 			slog.Info("use tool", name, input)
 			tl, ok := nameToTool[name]
 			if !ok {
-				return "", fmt.Errorf("failed to parse MRKL template correctly to get the tool name and input: %s %s", name, input)
+				return "", fmt.Errorf("failed to get the tool name and input from LLM's action text block: %s %s", name, input)
 			}
 			var observation string
 			switch tool := tl.(type) {
@@ -69,7 +69,7 @@ func Induce(ctx context.Context, q string) (string, error) {
 				observation = tool.Now()
 			case *tool.WebSearchTool:
 				if observation, err = tool.Search(ctx, input); err != nil {
-					return "", fmt.Errorf("exec websearch tool failed: %w", err)
+					return "", fmt.Errorf("failed to execute WebSearch tool: %w", err)
 				}
 			}
 			slog.Info(observation)
