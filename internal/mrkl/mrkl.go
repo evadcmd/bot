@@ -20,7 +20,7 @@ var tools = []tool.Tool{&tool.DatetimeTool{}, tool.NewWebSearch()}
 var nameToTool map[string]tool.Tool
 
 var finishRegex = regexp.MustCompile(`Final Answer\s*:\s*`)
-var actionRegex = regexp.MustCompile(`Action\s*:\s*(?P<action>.*)\s*Action\s*Input\s*:\s*(?P<actionInput>.*)`)
+var actionRegex = regexp.MustCompile(`Action\s*:\s*(?P<action>\w*)\s*Action\s*Input\s*:\s*(?P<actionInput>.*)`)
 var mrklTemplate = template.Must(template.ParseFiles(path.Join(util.RootPath, "/internal/mrkl/mrkl.tpl")))
 var stopFlags = []string{"Observation"}
 
@@ -52,11 +52,11 @@ func Induce(ctx context.Context, q string) (string, error) {
 		}
 		slog.Info(res)
 
-		if idx := finishRegex.FindStringSubmatchIndex(res); len(idx) != -1 {
+		if idx := finishRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
 			prompt += res[:idx[1]]
 			slog.Info(prompt)
 			return openai.ChatCompletion(ctx, answerer, prompt, nil)
-		} else if idx = actionRegex.FindStringSubmatchIndex(res); len(idx) != -1 {
+		} else if idx = actionRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
 			name, input := res[idx[2]:idx[3]], res[idx[4]:idx[5]]
 			slog.Info("use tool", name, input)
 			tl, ok := nameToTool[name]
