@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"path"
 	"regexp"
+	"strings"
 
 	"text/template"
 
@@ -20,10 +21,11 @@ var tools = []tool.Tool{&tool.DatetimeTool{}, tool.NewWebSearch()}
 var nameToTool map[string]tool.Tool
 
 var finishRegex = regexp.MustCompile(`Final Answer\s*:\s*`)
-var actionRegex = regexp.MustCompile(`Action\s*:\s*(?P<action>\w*)\s*Action\s*Input\s*:\s*(?P<actionInput>.*)`)
+var actionRegex = regexp.MustCompile(`Action\s*:\s*(?P<action>.*)\s*Action\s*Input\s*:\s*(?P<actionInput>.*)\s*`)
 var mrklTemplate = template.Must(template.ParseFiles(path.Join(util.RootPath, "/internal/mrkl/mrkl.tpl")))
 var stopFlags = []string{"Observation"}
 
+// var selector = openai.GPT4oMini
 var selector = openai.GPT3Dot5Turbo1106
 var answerer = openai.GPT4
 
@@ -57,11 +59,11 @@ func Induce(ctx context.Context, q string) (string, error) {
 			slog.Info(prompt)
 			return openai.ChatCompletion(ctx, answerer, prompt, nil)
 		} else if idx = actionRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
-			name, input := res[idx[2]:idx[3]], res[idx[4]:idx[5]]
+			name, input := strings.TrimSpace(res[idx[2]:idx[3]]), strings.TrimSpace(res[idx[4]:idx[5]])
 			slog.Info("use tool", name, input)
 			tl, ok := nameToTool[name]
 			if !ok {
-				return "", fmt.Errorf("failed to get the tool name and input from MRKL's action text block: %s %s", name, input)
+				return "", fmt.Errorf("failed to parse the tool name and input from MRKL's action text block: [%s] [%s]", name, input)
 			}
 			var observation string
 			switch tool := tl.(type) {
@@ -73,6 +75,10 @@ func Induce(ctx context.Context, q string) (string, error) {
 				}
 			}
 			slog.Info(observation)
+			if len(observation) == 0 {
+				log.Warn("failed to retrieve information from tool", name, input)
+				break
+			}
 			prompt += (res + "Observation: " + observation + "\n")
 		} else {
 			log.Warn("failed to parse the MKRL template")

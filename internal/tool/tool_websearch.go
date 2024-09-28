@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -65,6 +66,7 @@ func (ws *WebSearchTool) Search(ctx context.Context, query string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("failed to build a cse request: %w", err)
 	}
+	slog.Info("perform an google custom search: " + query)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send a cse request: %w", err)
@@ -81,6 +83,9 @@ func (ws *WebSearchTool) Search(ctx context.Context, query string) (string, erro
 	var resp cseResp
 	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
 		return "", fmt.Errorf("failed to unmarshal the cse response: %w", err)
+	}
+	if resp.Errors != nil {
+		return "", fmt.Errorf("get an error response from google custom search: %+v", resp.Errors)
 	}
 	var items []string
 	for i, item := range resp.Items {

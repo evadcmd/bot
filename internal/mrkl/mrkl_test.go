@@ -33,5 +33,5 @@ func TestRegexGroup(t *testing.T) {
 	t.Logf("%+v %+v %+v", match, groupNames, groupIdx)
 
 	idx := actionRegex.FindStringSubmatchIndex(tpl)
-	t.Logf(`%+v\n%+v\n%+v`, tpl[idx[0]:idx[1]], tpl[idx[2]:idx[3]], tpl[idx[4]:idx[5]])
+	t.Logf("%+v\n%+v\n%+v", tpl[idx[0]:idx[1]], tpl[idx[2]:idx[3]], tpl[idx[4]:idx[5]])
 }
