@@ -1,37 +1,28 @@
 package mrkl
 
-import (
-	"bytes"
-	"os"
-	"testing"
-)
+import "testing"
 
-func TestExecTemplate(t *testing.T) {
-	if err := mrklTemplate.Execute(
-		os.Stdout,
-		mrklParam{
-			Tools: tools,
-			Input: "content"}); err != nil {
-		t.Error(err)
+func TestToolDefsMatchTools(t *testing.T) {
+	if len(toolDefs) != len(tools) {
+		t.Fatalf("expected %d tool definitions, got %d", len(tools), len(toolDefs))
+	}
+	for i, td := range toolDefs {
+		if td.Function == nil {
+			t.Fatalf("tool definition %d has no function definition", i)
+		}
+		if td.Function.Name != tools[i].GetName() {
+			t.Errorf("expected tool definition %d name %q, got %q", i, tools[i].GetName(), td.Function.Name)
+		}
+		if len(td.Function.Parameters) == 0 {
+			t.Errorf("tool definition %q has empty parameters schema", td.Function.Name)
+		}
 	}
 }
 
-func TestRegexGroup(t *testing.T) {
-	var buffer bytes.Buffer
-	if err := mrklTemplate.Execute(
-		&buffer,
-		mrklParam{
-			Tools: tools,
-			Input: "content"}); err != nil {
-		t.Error(err)
+func TestNameToToolIsPopulated(t *testing.T) {
+	for _, tl := range tools {
+		if _, ok := nameToTool[tl.GetName()]; !ok {
+			t.Errorf("nameToTool is missing an entry for %q", tl.GetName())
+		}
 	}
-	tpl := buffer.String()
-	t.Log(tpl)
-	match := actionRegex.FindStringSubmatch(tpl)
-	groupNames := actionRegex.SubexpNames()
-	groupIdx := actionRegex.SubexpIndex("action")
-	t.Logf("%+v %+v %+v", match, groupNames, groupIdx)
-
-	idx := actionRegex.FindStringSubmatchIndex(tpl)
-	t.Logf("%+v\n%+v\n%+v", tpl[idx[0]:idx[1]], tpl[idx[2]:idx[3]], tpl[idx[4]:idx[5]])
 }
