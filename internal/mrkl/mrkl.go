@@ -1,92 +1,110 @@
 package mrkl
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
-	"path"
-	"regexp"
-	"strings"
-
-	"text/template"
 
 	"github.com/evadcmd/bot/internal/llm/openai"
 	"github.com/evadcmd/bot/internal/tool"
-	"github.com/evadcmd/bot/internal/util"
 )
+
+const maxIterations = 10
+
+const systemPrompt = "You are a versatile assistant with access to tools. " +
+	"Use them when they help answer the question. " +
+	"Respond in Japanese regardless of the language of tool outputs or intermediate reasoning."
 
 var tools = []tool.Tool{&tool.DatetimeTool{}, tool.NewWebSearch()}
 var nameToTool map[string]tool.Tool
-
-var finishRegex = regexp.MustCompile(`Final Answer\s*:\s*`)
-var actionRegex = regexp.MustCompile(`Action\s*:\s*(?P<action>.*)\s*Action\s*Input\s*:\s*(?P<actionInput>.*)\s*`)
-var mrklTemplate = template.Must(template.ParseFiles(path.Join(util.RootPath, "/internal/mrkl/mrkl.tpl")))
-var stopFlags = []string{"Observation"}
+var toolDefs []openai.ToolDef
 
 var selector = openai.GPT3Dot5Turbo1106
 var answerer = openai.GPT4
 
-// chatCompletion is a seam over openai.ChatCompletion so tests can stub it.
-var chatCompletion = openai.ChatCompletion
-
-type mrklParam struct {
-	Tools []tool.Tool
-	Input string
-}
+// chatCompletionWithTools is a seam over openai.ChatCompletionWithTools so tests can stub it.
+var chatCompletionWithTools = openai.ChatCompletionWithTools
 
 func init() {
 	nameToTool = make(map[string]tool.Tool)
-	for _, tool := range tools {
-		nameToTool[tool.GetName()] = tool
+	for _, t := range tools {
+		nameToTool[t.GetName()] = t
+		toolDefs = append(toolDefs, openai.NewFunctionTool(t.GetName(), t.GetDescription(), t.GetParameters()))
 	}
 }
 
+// Induce runs a tool-calling agent loop: the selector model decides whether
+// to answer directly or call a tool, tool results are fed back as message
+// history, and once the selector is done the answerer model produces the
+// final response from the full accumulated conversation.
 func Induce(ctx context.Context, q string) (string, error) {
-	var mrklTplBytes bytes.Buffer
-	if err := mrklTemplate.Execute(&mrklTplBytes, mrklParam{Tools: tools, Input: q}); err != nil {
-		return "", fmt.Errorf("failed to execute the MRKL template: %w", err)
+	messages := []openai.Message{
+		{Role: openai.RoleSystem, Content: systemPrompt},
+		{Role: openai.RoleUser, Content: q},
 	}
-	prompt := mrklTplBytes.String()
-	for range 10 {
-		res, err := chatCompletion(ctx, selector, prompt, stopFlags)
+
+	for range maxIterations {
+		msg, finishReason, err := chatCompletionWithTools(ctx, selector, messages, toolDefs)
 		if err != nil {
 			return "", fmt.Errorf("failed to send a request to OpenAI API server: %w", err)
 		}
-		slog.Info(res)
+		messages = append(messages, msg)
 
-		if idx := finishRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
-			prompt += res[:idx[1]]
-			slog.Info(prompt)
-			return chatCompletion(ctx, answerer, prompt, nil)
-		} else if idx = actionRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
-			name, input := strings.TrimSpace(res[idx[2]:idx[3]]), strings.TrimSpace(res[idx[4]:idx[5]])
-			slog.Info("use tool", name, input)
-			tl, ok := nameToTool[name]
-			if !ok {
-				return "", fmt.Errorf("failed to parse the tool name and input from MRKL's action text block: [%s] [%s]", name, input)
+		if finishReason != openai.FinishReasonToolCalls {
+			return finalize(ctx, messages)
+		}
+
+		for _, tc := range msg.ToolCalls {
+			observation, err := runTool(ctx, tc)
+			if err != nil {
+				return "", err
 			}
-			var observation string
-			switch tool := tl.(type) {
-			case *tool.DatetimeTool:
-				observation = tool.Now()
-			case *tool.WebSearchTool:
-				if observation, err = tool.Search(ctx, input); err != nil {
-					return "", fmt.Errorf("failed to execute WebSearch tool: %w", err)
-				}
-			default:
-				return "", fmt.Errorf("unknown tool type for tool %q: %T", name, tool)
-			}
-			slog.Info(observation)
-			if len(observation) == 0 {
-				slog.Warn("failed to retrieve information from tool", name, input)
-				break
-			}
-			prompt += (res + "Observation: " + observation + "\n")
-		} else {
-			slog.Warn("failed to parse the MRKL template")
-			break
+			slog.Info("tool call", "name", tc.Function.Name, "input", tc.Function.Arguments, "observation", observation)
+			messages = append(messages, openai.Message{
+				Role:       openai.RoleTool,
+				ToolCallID: tc.ID,
+				Content:    observation,
+			})
 		}
 	}
-	return chatCompletion(ctx, answerer, prompt, nil)
+
+	slog.Warn("MRKL reached the maximum number of tool-call iterations")
+	return finalize(ctx, messages)
+}
+
+// finalize hands the full accumulated conversation, including every tool
+// call and result gathered so far, to the answerer model for a final
+// response — nothing gathered during the loop is discarded.
+func finalize(ctx context.Context, messages []openai.Message) (string, error) {
+	msg, _, err := chatCompletionWithTools(ctx, answerer, messages, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to send a request to OpenAI API server: %w", err)
+	}
+	return msg.Content, nil
+}
+
+func runTool(ctx context.Context, tc openai.ToolCall) (string, error) {
+	tl, ok := nameToTool[tc.Function.Name]
+	if !ok {
+		return "", fmt.Errorf("unknown tool requested by the model: %q", tc.Function.Name)
+	}
+	switch t := tl.(type) {
+	case *tool.DatetimeTool:
+		return t.Now(), nil
+	case *tool.WebSearchTool:
+		var args struct {
+			Query string `json:"query"`
+		}
+		if err := json.Unmarshal([]byte(tc.Function.Arguments), &args); err != nil {
+			return "", fmt.Errorf("failed to parse arguments for tool %q: %w", tc.Function.Name, err)
+		}
+		observation, err := t.Search(ctx, args.Query)
+		if err != nil {
+			return "", fmt.Errorf("failed to execute WebSearch tool: %w", err)
+		}
+		return observation, nil
+	default:
+		return "", fmt.Errorf("unknown tool type for tool %q: %T", tc.Function.Name, t)
+	}
 }

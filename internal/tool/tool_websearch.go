@@ -52,8 +52,14 @@ func (ws *WebSearchTool) GetDescription() string {
 	return "A tool for obtaining information from the internet"
 }
 
-func (*WebSearchTool) GetInputFmt() string {
-	return "a string format search query"
+func (*WebSearchTool) GetParameters() json.RawMessage {
+	return json.RawMessage(`{
+		"type": "object",
+		"properties": {
+			"query": {"type": "string", "description": "search keywords"}
+		},
+		"required": ["query"]
+	}`)
 }
 
 func (ws *WebSearchTool) Search(ctx context.Context, query string) (string, error) {
