@@ -14,7 +14,6 @@ import (
 	"github.com/evadcmd/bot/internal/llm/openai"
 	"github.com/evadcmd/bot/internal/tool"
 	"github.com/evadcmd/bot/internal/util"
-	"github.com/gofiber/fiber/v2/log"
 )
 
 var tools = []tool.Tool{&tool.DatetimeTool{}, tool.NewWebSearch()}
@@ -25,7 +24,6 @@ var actionRegex = regexp.MustCompile(`Action\s*:\s*(?P<action>.*)\s*Action\s*Inp
 var mrklTemplate = template.Must(template.ParseFiles(path.Join(util.RootPath, "/internal/mrkl/mrkl.tpl")))
 var stopFlags = []string{"Observation"}
 
-// var selector = openai.GPT4oMini
 var selector = openai.GPT3Dot5Turbo1106
 var answerer = openai.GPT4
 
@@ -73,17 +71,19 @@ func Induce(ctx context.Context, q string) (string, error) {
 				if observation, err = tool.Search(ctx, input); err != nil {
 					return "", fmt.Errorf("failed to execute WebSearch tool: %w", err)
 				}
+			default:
+				return "", fmt.Errorf("unknown tool type for tool %q: %T", name, tool)
 			}
 			slog.Info(observation)
 			if len(observation) == 0 {
-				log.Warn("failed to retrieve information from tool", name, input)
+				slog.Warn("failed to retrieve information from tool", name, input)
 				break
 			}
 			prompt += (res + "Observation: " + observation + "\n")
 		} else {
-			log.Warn("failed to parse the MKRL template")
+			slog.Warn("failed to parse the MRKL template")
 			break
 		}
 	}
-	return openai.ChatCompletion(ctx, answerer, q, nil)
+	return openai.ChatCompletion(ctx, answerer, prompt, nil)
 }
