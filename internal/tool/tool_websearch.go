@@ -71,6 +71,7 @@ func (ws *WebSearchTool) Search(ctx context.Context, query string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("failed to send a cse request: %w", err)
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		data, err := io.ReadAll(res.Body)
 		if err == nil {
@@ -78,7 +79,6 @@ func (ws *WebSearchTool) Search(ctx context.Context, query string) (string, erro
 		}
 		return "", fmt.Errorf("get an error response from google custom search: %w", err)
 	}
-	defer res.Body.Close()
 
 	var resp cseResp
 	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
@@ -91,7 +91,7 @@ func (ws *WebSearchTool) Search(ctx context.Context, query string) (string, erro
 	for i, item := range resp.Items {
 		items = append(items, fmt.Sprintf("(%d) %s %s %s", i, item.Title, item.Snippet, item.Link))
 	}
-	return strings.Join(items, "	"), nil
+	return strings.Join(items, "\t"), nil
 }
 
 func NewWebSearch() *WebSearchTool {
