@@ -27,6 +27,9 @@ var stopFlags = []string{"Observation"}
 var selector = openai.GPT3Dot5Turbo1106
 var answerer = openai.GPT4
 
+// chatCompletion is a seam over openai.ChatCompletion so tests can stub it.
+var chatCompletion = openai.ChatCompletion
+
 type mrklParam struct {
 	Tools []tool.Tool
 	Input string
@@ -46,7 +49,7 @@ func Induce(ctx context.Context, q string) (string, error) {
 	}
 	prompt := mrklTplBytes.String()
 	for range 10 {
-		res, err := openai.ChatCompletion(ctx, selector, prompt, stopFlags)
+		res, err := chatCompletion(ctx, selector, prompt, stopFlags)
 		if err != nil {
 			return "", fmt.Errorf("failed to send a request to OpenAI API server: %w", err)
 		}
@@ -55,7 +58,7 @@ func Induce(ctx context.Context, q string) (string, error) {
 		if idx := finishRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
 			prompt += res[:idx[1]]
 			slog.Info(prompt)
-			return openai.ChatCompletion(ctx, answerer, prompt, nil)
+			return chatCompletion(ctx, answerer, prompt, nil)
 		} else if idx = actionRegex.FindStringSubmatchIndex(res); len(idx) != 0 {
 			name, input := strings.TrimSpace(res[idx[2]:idx[3]]), strings.TrimSpace(res[idx[4]:idx[5]])
 			slog.Info("use tool", name, input)
@@ -85,5 +88,5 @@ func Induce(ctx context.Context, q string) (string, error) {
 			break
 		}
 	}
-	return openai.ChatCompletion(ctx, answerer, prompt, nil)
+	return chatCompletion(ctx, answerer, prompt, nil)
 }
