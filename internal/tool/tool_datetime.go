@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -14,8 +15,8 @@ func (dt *DatetimeTool) GetDescription() string {
 	return `A tool returns current datetime in "{YEAR}-{MONTH}-{DAY} {HOUR}:{MINUTE}:{SECOND}" format`
 }
 
-func (*DatetimeTool) GetInputFmt() string {
-	return "no input parameter is required"
+func (*DatetimeTool) GetParameters() json.RawMessage {
+	return json.RawMessage(`{"type":"object","properties":{}}`)
 }
 
 func (*DatetimeTool) Now() string {
